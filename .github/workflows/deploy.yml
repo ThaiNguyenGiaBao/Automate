@@ -1,37 +1,65 @@
-name: GitHub Actions Demo
+name: Complete GitHub Actions Workflow
 run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
 
 on: [push]
 
 jobs:
-  Explore-GitHub-Actions:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      MY_ENV_VAR: "Hello, World!"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      - name: Restore npm cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+        env:
+          TEST_ENV_VAR: ${{ secrets.TEST_ENV_VAR }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-results
+          path: test-results/
+
+      - name: Set output value
+        id: set_output
+        run: echo "::set-output name=my_output::$(date)"
+
+  deploy:
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - name: Check out repository code
+      - name: Checkout code
         uses: actions/checkout@v3
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-      - name: List files in the repository
-        run: |
-          ls ${{ github.workspace }}
-      - run: echo "🍏 This job’s status is ${{ job.status }}."
 
-  ds-GitHub-Actions:
-      runs-on: ubuntu-latest
-  
-      steps:
-        - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-        - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-        - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-        - name: Check out repository code
-          uses: actions/checkout@v3
-        - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-        - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-        - name: List files in the repository
-          run: |
-            ls ${{ github.workspace }}
-        - run: echo "🍏 This job’s status is ${{ job.status }}."
+      - name: Download test results
+        uses: actions/download-artifact@v2
+        with:
+          name: test-results
+
+      - name: Print test results
+        run: cat test-results/*
+
+      - name: Deploy application
+        run: echo "Deploying application with output: ${{ needs.build.outputs.my_output }}"
