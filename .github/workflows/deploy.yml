@@ -61,5 +61,4 @@ jobs:
       - name: Print test results
         run: cat test-results/*
 
-      - name: Deploy application
-        run: echo "Deploying application with output: ${{ needs.build.outputs.my_output }}"
+      
